@@ -1,4 +1,4 @@
-#include <Adafruit_BMP085.h>
+#include <Adafruit_BMP280.h>
 #include <WiFi.h>
 #include <DHT.h>
 #include <OneWire.h>
@@ -35,44 +35,33 @@ OneWire oneWire(SOIL_TEMPERATURE_PIN);
 DallasTemperature sensors(&oneWire);
 
 // Barômetro
-#define AIR_PRESSURE_PIN 14
+Adafruit_BMP280 bmp;
 float airPressure = 0;
-Adafruit_BMP085 bmp;
-
-// Dados sobre o Wi-Fi
-const char* ssid = "Alunos";
-const char* password = "ifprpvai";
 
 void setup() {
   pinMode(SOIL_TEMPERATURE_PIN, INPUT);
 
   Serial.begin(115200);
+  while (!Serial);
+
   dht.begin();
   sensors.begin();
-  bmp.begin();
-}
 
-void connect_wifi() {
-  delay(10);
-  Serial.println();
-  Serial.print("Conectando à rede ");
-  Serial.println(ssid);
+  int status = bmp.begin(0x76);
+  bmp.
 
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  while (!status) {
+    Serial.print("Erro ao iniciar o barômetro! SensorID: 0x");
+    Serial.println(bmp.sensorID());
+    delay(5000);
   }
 
-  Serial.println("");
-  Serial.println("Conectado à rede wi-fi!");
-
-  Serial.print("IP da rede wi-fi: ");
-  Serial.println(WiFi.localIP());
+  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+                  Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+                  Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
 }
-
-long lastMsg = 0;
 
 void listarDHT() {
   temperature = dht.readTemperature();   
@@ -88,7 +77,7 @@ void listarDHT() {
 }
 
 void listarHumidadeDoSolo() {
-  soilHumidity = map(analogRead(SOIL_HUMIDITY_PIN), 0, 4095, 100, 0); // 3600 é o menor valor que obtemos
+  soilHumidity = map(analogRead(SOIL_HUMIDITY_PIN), 0, 4095, 100, 0); 
 
   Serial.print("Humidade do solo: ");
   Serial.print(soilHumidity);
@@ -120,7 +109,7 @@ void listarTemperaturaDoSolo() {
 }
 
 void listarBarometro() {
-  airPressure = bmp.readPressure();
+  airPressure = bmp.readPressure() / 100;
 
   Serial.print("Pressão do ar: ");
   Serial.print(airPressure);
